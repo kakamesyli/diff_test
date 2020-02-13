@@ -1,0 +1,78 @@
+function [] = diff_test(x_in,y_in)
+%DIFF_TEST 此处显示有关此函数的摘要
+%   单点通过衍射孔径的衍射方程
+
+%%
+f1 = 200;%focal of collimator
+% f2 = 30;%focal of Fraunhofer lens
+z_slit = 100;
+z = 3000;
+%方向余弦
+R = sqrt(x_in^2+y_in^2+f1^2);
+direct = [x_in/R,y_in/R,f1/R];
+%wavelength
+Lamda = 550e-6;
+Img = sqrt(-1);
+k = 2*pi/Lamda;
+%diffraction screen range
+range_x = 15;
+range_y = 15;
+%step of range
+step_range = 20;
+exchange_x = 2*range_x*step_range;
+exchange_y = 2*range_y*step_range;
+%slit
+edge = 3;%狭缝单边个数
+slit_x = 0.3;%缝宽单边
+slit_y = 10;%缝长单边
+step_x = 0.1;
+step_y = 1;
+x0 = ( slit_x*(-edge*4-1):step_x:slit_x*(-edge*4+1) );
+y0 = (-slit_y:step_y:slit_y);%狭缝长度
+if edge ~= 0
+    for num_x = 1:2*edge
+%         x0 = cat(1,x0,( slit_x*((-edge+num_x)*4-1):step_x:slit_x*((-edge+num_x)*4+1) ));
+        x0 = cat(2,x0,( slit_x*((-edge+num_x)*4-1):step_x:slit_x*((-edge+num_x)*4+1) ));
+    end
+end
+length_x = length(x0);
+length_y = length(y0);
+[X0,Y0] = meshgrid(x0,y0);
+F1 = f1*ones(length_y,length_x);
+E = zeros();
+%%
+A = exp(Img*k*z)/(Img*Lamda*z);%衍射系数
+%相位变化
+% L = sprt(X^2+Y^2);
+% theta = atan(L/z_slit);
+% phase = exp( 2*pi*(z/cos(theta)-z)/Lamda );
+for x=1:exchange_x+1
+    xmodify = -range_x+(x-1)*2*range_x/exchange_x;
+%     a=xmodify;
+%  f   sum_x = sum( sum( exp(-Img*2*pi * (xmodify*x0*(2*range_x/(exchange_x))/(Lamda*z))),2 ),1);
+%     sum_x = sum( sum( exp(-Img*2*pi * (xmodify*x0/(Lamda*z)))*step_x,2 ),1);
+    for y=1:exchange_y+1
+        ymodify = -range_y+(y-1)*2*range_y/exchange_y;
+        %case 1
+        E0 = A * exp(Img*k*(xmodify^2+ymodify^2)/(2*z)) * exp(Img*k* (X0*direct(1)+Y0*direct(2)+F1*direct(3)) ) .*...
+            exp( -Img*2*pi * (xmodify*X0/(Lamda*z)+ymodify*Y0/(Lamda*z)) )*step_x*step_y;
+        E(exchange_y+1-(y-1),x) = sum(sum(E0,2));
+        %case 2
+%    f     sum_y = sum( exp(-Img*2*pi * (ymodify*y0*(2*range_y/(exchange_y))/(Lamda*z))),2 );
+%         sum_y = sum( exp(-Img*2*pi * (ymodify*y0/(Lamda*z)))*step_y,2 );
+%         E(exchange_y+1-(y-1),x) = A * exp(Img*k*(xmodify^2+ymodify^2)/(2*z)) * sum_x*sum_y; 
+        %case 3
+%         b=ymodify;
+%         Int_region = @(x_0,y_0) exp(-Img*2*pi*(a*x_0+b*y_0));
+%         q = integral2(Int_region,-1,1,-0.1,0.1);
+%         E(x,y) = A * exp(Img*k*(a^2+b^2)/(2*z)) * q;
+    end
+end
+EE = abs(E);
+%%
+figure(1);
+imshow( EE,[min(EE(:)),max(EE(:))] );
+xlabel('x');
+ylabel('y');
+grid on
+end
